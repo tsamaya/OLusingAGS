@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>OpenLayers using ArcGIS for Server OGC capabilities Example</title>
+    <link rel="stylesheet" href="style.css" type="text/css">
+    <script src="http://code.jquery.com/jquery-1.8.3.min.js"></script>
+    <script src="http://openlayers.org/api/2.13.1/OpenLayers.js"></script>
+    <script type="text/javascript">
+    var map, highlightlayer;
+
+    //OpenLayers.ProxyHost = "/proxy/proxy.ashx?";
+    OpenLayers.ProxyHost ="proxy.php?";
+    //OpenLayers.ProxyHost = "proxy.cgi?url=";
+    var user;
+
+    function init() {
+
+        /*$.get('http://api.hostip.info/get_json.php', function(json) {
+            user = json;
+            loadMap();
+        });
+*/
+        loadMap();
+
+    }
+
+
+    function loadMap() {
+        map = new OpenLayers.Map({
+            div: "map",
+            projection: "EPSG:3857"
+        });
+
+        // Basmaps !
+        var geoFLALayer = new OpenLayers.Layer.WMS("GEOFLA WMS",
+            "http://services.opengeodata.fr/arcgis/services/IGN/GEOFLA/MapServer/WMSServer", {
+                layers: '0,1,2,3,4'
+            }, {
+                isBaseLayer: true
+            });
+        map.addLayer(geoFLALayer);
+
+        var geoMONTPELLIERLayer = new OpenLayers.Layer.WMS("MONTPELLIER WMS",
+            "http://services.opengeodata.fr/arcgis/services/MONTPELLIER/ORTHOPHOTO11_WME/MapServer/WMSServer", {
+                layers: '0'
+            }, {
+                isBaseLayer: true
+            });
+        map.addLayer(geoMONTPELLIERLayer);
+
+        /*
+        // If tile matrix identifiers differ from zoom levels (0, 1, 2, ...)
+        // then they must be explicitly provided.
+        var matrixIds = new Array(20);
+        for (var i = 0; i < 20; i++) {
+            matrixIds[i] = "EPSG:3857:" + i;
+        }
+        var wmts = new OpenLayers.Layer.WMTS({
+            name: "Montpellier (wmts)",
+            url: "http://services.opengeodata.fr/arcgis/rest/services/MONTPELLIER/ORTHOPHOTO_2009_WME/MapServer/WMTS/",
+            layer: "medford:buildings",
+            matrixSet: "EPSG:3857",
+            matrixIds: matrixIds,
+            format: "image/png",
+            style: "_null",
+            opacity: 0.7,
+            isBaseLayer: true
+        });
+        map.addLayer(wmts);
+        */
+
+        // Operational layers
+
+        
+        var wmsForet = new OpenLayers.Layer.WMS("Forets (wms)",
+            "http://services.opengeodata.fr/arcgis/services/ONF/FORETS_PUBLIQUES_ENSEMBLE/MapServer/WMSServer", {
+                layers: '0',
+                transparent: true
+            }, {
+                isBaseLayer: false
+            }
+        );
+        map.addLayer(wmsForet);
+        
+
+        // Gares
+        var wmsStations = new OpenLayers.Layer.WMS("Gares (wms)",
+            "http://services.opengeodata.fr/arcgis/services/SNCF/GARES_VOYAGEURS_MS/MapServer/WMSServer", {
+                layers: '0,1',
+                transparent: true
+            }, {
+                isBaseLayer: false
+            }
+        );
+        wmsStations.setVisibility(false);
+        map.addLayer(wmsStations);
+        
+        
+        var myStyles = new OpenLayers.StyleMap({
+            "default": new OpenLayers.Style({
+                pointRadius: 5, 
+                fillColor: "#ffcc66",
+                strokeColor: "#ff9933",
+                strokeWidth: 2,
+                graphicZIndex: 1
+            }),
+            "select": new OpenLayers.Style({
+                fillColor: "#66ccff",
+                strokeColor: "#3399ff",
+                graphicZIndex: 2
+            })
+        });
+        
+        var wfs = new OpenLayers.Layer.Vector("Gare (wfs)", {
+            strategies: [new OpenLayers.Strategy.BBOX()],
+            protocol: new OpenLayers.Protocol.WFS({
+                version: "1.1.0",
+                srsName: "EPSG:3857", // this is the default
+                url: "http://services.opengeodata.fr/arcgis/services/SNCF/GARES_VOYAG_FS/MapServer/WFSServer",
+                featureType: "Gare",
+                geometryName: "Shape",
+                //outputFormat: 
+                readFormat: new OpenLayers.Format.GML(),
+            }),
+            styleMap: myStyles,
+            rendererOptions: {zIndexing: true}
+        });
+        map.addLayer(wfs);
+
+        // Equipements montpellier
+        var wmsHighways = new OpenLayers.Layer.WMS("Montpellier équipements (wms)",
+            "http://services.opengeodata.fr/arcgis/services/MONTPELLIER/EQUIPEMENTS_MS/MapServer/WMSServer", {
+                layers: '0,1',
+                transparent: true
+            }, {
+                isBaseLayer: false
+            }
+        );
+        map.addLayer(wmsHighways);
+
+
+        var infoEquip = new OpenLayers.Control.WMSGetFeatureInfo({
+            url: 'http://services.opengeodata.fr/arcgis/services/MONTPELLIER/EQUIPEMENTS_MS/MapServer/WMSServer',
+            title: 'Identify features by clicking',
+            queryVisible: true,
+            eventListeners: {
+                getfeatureinfo: function(event) {
+                    map.addPopup(new OpenLayers.Popup.FramedCloud(
+                        "chicken",
+                        map.getLonLatFromPixel(event.xy),
+                        null,
+                        event.text,
+                        null,
+                        true
+                    ));
+                }
+            }
+        });
+        map.addControl(infoEquip);
+        infoEquip.activate();
+
+        map.addControl(new OpenLayers.Control.LayerSwitcher());
+        map.setCenter(new OpenLayers.LonLat(315073.43055, 5916646.39210), 6);
+        map.addControl(new OpenLayers.Control.MousePosition());
+    }
+    </script>
+</head>
+
+<body onload="init()">
+    <h1 id="title">This example shows the ArcGIS for Server OGC Capabilities</h1>
+
+    <div id="tags">
+        esri, arcgis, ogc, wms, wmts, wfs
+    </div>
+
+    <div id="shortdesc">Here is an example with OpenLayer using ArcGIS for Server OGC Capablities</div>
+
+    <div id="map" class="largemap"></div>
+
+    <div id="responseText"></div>
+
+    <div id="docs">
+        <p>This sample shows an OpenLayers map with wms and wfs services from an ArcGIS Server.<br />
+        The railway stations are comming from wms and wfs streams.<br />
+        Zoom to Montpellier, you can click on an equipement to see database table details, you can also change the basemap with orthophotos.
+        </p>
+    </div>
+</body>
+
+</html>
