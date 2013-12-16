@@ -17,14 +17,10 @@
     var user;
 
     function init() {
-
-        /*$.get('http://api.hostip.info/get_json.php', function(json) {
-            user = json;
-            loadMap();
-        });
-*/
+        //$.get('http://api.hostip.info/get_json.php', function(json) {
+        //    user = json;
         loadMap();
-
+        //});
     }
 
 
@@ -95,7 +91,7 @@
                 isBaseLayer: false
             }
         );
-        wmsStations.setVisibility(false);
+        wmsStations.setVisibility(true);
         map.addLayer(wmsStations);
         
         
